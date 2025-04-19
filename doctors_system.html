@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Doctor's System</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #83a4d4, #b6fbff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      padding: 30px;
+      transition: 0.3s ease;
+      width: 900px;
+    }
+    .hidden { display: none; }
+    input, select, button, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .btn { 
+      background: #007bff; 
+      color: white; 
+      font-weight: bold; 
+      cursor: pointer; 
+      border: none; 
+      transition: 0.2s ease-in-out;
+      margin-top: 15px;
+    }
+    .btn:hover { background: #0056b3; }
+    .form-row { display: flex; gap: 20px; flex-wrap: wrap; }
+    .form-section { flex: 1; min-width: 250px; padding: 0 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+    .details-btn { 
+      background-color: #28a745; 
+      color: white; 
+      border: none; 
+      padding: 5px 10px; 
+      cursor: pointer; 
+      border-radius: 4px; 
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+      text-align: center;
+    }
+    .recommendation-box {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    .status-badge {
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+    .pending { background-color: #ffc107; color: #000; }
+    .reviewed { background-color: #28a745; color: #fff; }
+  </style>
+</head>
+<body>
+
+<div class="card" id="login-box">
+  <h2>Doctor's Login</h2>
+  <input type="text" id="username" placeholder="Username" required />
+  <input type="password" id="password" placeholder="Password" required />
+  <button class="btn" onclick="authenticate()">Login</button>
+</div>
+
+<div class="card hidden" id="dashboard-box">
+  <h2>Doctor's Dashboard</h2>
+  <button class="btn" onclick="showView()">📋 View Patient Records</button>
+</div>
+
+<div class="card hidden" id="view-box">
+  <h2>Patient Records</h2>
+  <div id="records"></div>
+  <button class="btn" onclick="goDashboard()">⬅ Back to Dashboard</button>
+</div>
+
+<div class="card hidden" id="details-box">
+  <h2>Patient Details</h2>
+  <div id="details-content"></div>
+  <div class="recommendation-box">
+    <h3>Doctor's Recommendation</h3>
+    <textarea id="recommendation" rows="4" placeholder="Enter your recommendation here..."></textarea>
+    <button class="btn" onclick="saveRecommendation()">Save Recommendation</button>
+  </div>
+  <button class="btn" onclick="showView()">⬅ Back to Records</button>
+</div>
+
+<script>
+  let selectedPatient = null;
+
+  function authenticate() {
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value.trim();
+    if (btoa(u) === "ZG9jdG9y" && btoa(p) === "ZG9jdG9y") {
+      document.getElementById("login-box").classList.add("hidden");
+      document.getElementById("dashboard-box").classList.remove("hidden");
+    } else {
+      alert("Invalid login");
+    }
+  }
+
+  function showView() {
+    document.getElementById("dashboard-box").classList.add("hidden");
+    document.getElementById("details-box").classList.add("hidden");
+    document.getElementById("view-box").classList.remove("hidden");
+    loadPatients();
+  }
+
+  function goDashboard() {
+    document.getElementById("view-box").classList.add("hidden");
+    document.getElementById("details-box").classList.add("hidden");
+    document.getElementById("dashboard-box").classList.remove("hidden");
+  }
+
+  function loadPatients() {
+    const container = document.getElementById("records");
+    const patients = JSON.parse(localStorage.getItem("patients") || "[]");
+    if (patients.length === 0) {
+      container.innerHTML = "<p>No records yet.</p>";
+      return;
+    }
+    let html = `<table><tr><th>Name</th><th>Phone</th><th>Email</th><th>Exam Date</th><th>Status</th><th>Action</th></tr>`;
+    patients.forEach((p, i) => {
+      const status = p.recommendation ? "Reviewed" : "Pending";
+      const statusClass = p.recommendation ? "reviewed" : "pending";
+      html += `<tr>
+        <td>${p.name}</td>
+        <td>${p.phone}</td>
+        <td>${p.email}</td>
+        <td>${p.exam}</td>
+        <td><span class="status-badge ${statusClass}">${status}</span></td>
+        <td><button class='details-btn' onclick='viewDetails(${i})'>View</button></td>
+      </tr>`;
+    });
+    html += `</table>`;
+    container.innerHTML = html;
+  }
+
+  function viewDetails(index) {
+    const patients = JSON.parse(localStorage.getItem("patients") || "[]");
+    const p = patients[index];
+    selectedPatient = p;
+    const html = `
+      <p><strong>Name:</strong> ${p.name}</p>
+      <p><strong>Phone:</strong> ${p.phone}</p>
+      <p><strong>Email:</strong> ${p.email}</p>
+      <p><strong>Location:</strong> ${p.location}</p>
+      <p><strong>Date of Birth:</strong> ${p.dob}</p>
+      <p><strong>Date of Examination:</strong> ${p.exam}</p>
+      <h4>Right Eye (OD)</h4>
+      <ul>
+        <li><strong>SPH:</strong> ${p.od[0]}</li>
+        <li><strong>CYL:</strong> ${p.od[1]}</li>
+        <li><strong>Axis:</strong> ${p.od[2]}</li>
+        <li><strong>ADD:</strong> ${p.od[3]}</li>
+      </ul>
+      <h4>Left Eye (OS)</h4>
+      <ul>
+        <li><strong>SPH:</strong> ${p.os[0]}</li>
+        <li><strong>CYL:</strong> ${p.os[1]}</li>
+        <li><strong>Axis:</strong> ${p.os[2]}</li>
+        <li><strong>ADD:</strong> ${p.os[3]}</li>
+      </ul>
+      ${p.recommendation ? `<h4>Previous Recommendation:</h4><p>${p.recommendation}</p>` : ''}
+    `;
+    document.getElementById("view-box").classList.add("hidden");
+    document.getElementById("details-box").classList.remove("hidden");
+    document.getElementById("details-content").innerHTML = html;
+    document.getElementById("recommendation").value = p.recommendation || '';
+  }
+
+  function saveRecommendation() {
+    if (!selectedPatient) return;
+    
+    const patients = JSON.parse(localStorage.getItem("patients") || "[]");
+    const recommendation = document.getElementById("recommendation").value.trim();
+    
+    // Find and update the patient record
+    const updatedPatients = patients.map(p => {
+      if (p.email === selectedPatient.email) {
+        return { ...p, recommendation };
+      }
+      return p;
+    });
+    
+    localStorage.setItem("patients", JSON.stringify(updatedPatients));
+    alert("Recommendation saved successfully!");
+    showView();
+  }
+</script>
+</body>
+</html> 
