@@ -10,6 +10,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 import PatientForm from "@/pages/patient-form";
 import PatientRecords from "@/pages/patient-records";
 import PatientDetails from "@/pages/patient-details";
+import DoctorReview from "@/pages/doctor-review";
 import { AuthProvider } from "@/hooks/use-auth";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <ProtectedRoute path="/patient/edit/:id" component={PatientForm} />
       <ProtectedRoute path="/patients" component={PatientRecords} />
       <ProtectedRoute path="/patient/:id" component={PatientDetails} />
+      <ProtectedRoute path="/doctor/review/:id" component={DoctorReview} />
       <Route component={NotFound} />
     </Switch>
   );
