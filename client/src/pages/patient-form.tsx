@@ -226,8 +226,8 @@ export default function PatientForm() {
             {/* Import Section */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Import Patient Data</h3>
-              <div className="flex items-center">
-                <div className="flex-grow">
+              <div className="flex flex-col md:flex-row items-start">
+                <div className="flex-grow w-full md:w-auto">
                   <Label htmlFor="patientFile" className="block text-sm font-medium text-gray-700 mb-1">
                     Upload file with patient data
                   </Label>
@@ -246,10 +246,39 @@ export default function PatientForm() {
                   </div>
                   <p className="mt-1 text-xs text-gray-500">Supported formats: PDF, Word document, or Text file</p>
                 </div>
-                <div className="ml-4">
+                <div className="ml-0 md:ml-4 mt-4 md:mt-0 w-full md:w-auto">
                   <div className="bg-blue-50 p-3 rounded-md">
-                    <i className="ri-information-line text-blue-500 mr-1"></i>
-                    <span className="text-xs text-blue-700">Patient data will be automatically extracted from the uploaded file.</span>
+                    <div className="flex items-start">
+                      <i className="ri-information-line text-blue-500 mr-2 mt-1"></i>
+                      <div>
+                        <p className="text-xs text-blue-700 mb-1">Patient data will be automatically extracted from the uploaded file.</p>
+                        <details className="text-xs text-blue-700">
+                          <summary className="cursor-pointer font-medium">View sample text format</summary>
+                          <pre className="mt-1 p-2 bg-blue-100 rounded whitespace-pre-wrap text-[10px] leading-tight">
+Patient: John Doe
+Phone: (555) 123-4567
+Email: john@example.com
+Location: New York, NY
+DOB: 1985-05-15
+Exam Date: 2025-04-25
+
+--- Right Eye ---
+SPH: -2.25
+CYL: -0.75
+AXIS: 180
+ADD: +1.50
+
+--- Left Eye ---
+SPH: -2.00
+CYL: -0.50
+AXIS: 175
+ADD: +1.50
+
+PD: 64
+                          </pre>
+                        </details>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -68,6 +68,30 @@ export async function parseDocxFile(file: File): Promise<Partial<PatientFormData
 
 /**
  * Attempts to extract prescription data from a txt file
+ * 
+ * Example of expected format:
+ * ```
+ * Patient: John Doe
+ * Phone: (555) 123-4567
+ * Email: john@example.com
+ * Location: New York, NY
+ * DOB: 1985-05-15
+ * Exam Date: 2025-04-25
+ * 
+ * --- Right Eye ---
+ * SPH: -2.25
+ * CYL: -0.75
+ * AXIS: 180
+ * ADD: +1.50
+ * 
+ * --- Left Eye ---
+ * SPH: -2.00
+ * CYL: -0.50
+ * AXIS: 175
+ * ADD: +1.50
+ * 
+ * PD: 64
+ * ```
  */
 export async function parseTxtFile(file: File): Promise<Partial<PatientFormData>> {
   return new Promise((resolve, reject) => {
@@ -76,7 +100,19 @@ export async function parseTxtFile(file: File): Promise<Partial<PatientFormData>
     fileReader.onload = (event) => {
       try {
         const text = event.target?.result as string;
-        const patientData = extractDataFromText(text);
+        
+        // First try to parse as a structured format with clear sections
+        let patientData = parseStructuredTextFormat(text);
+        
+        // If structured parsing didn't yield much data, fall back to the general extraction
+        const dataKeysCount = Object.keys(patientData).filter(key => 
+          key !== 'rightEye' && key !== 'leftEye' && key !== 'pdType' && 
+          patientData[key as keyof typeof patientData] !== undefined).length;
+          
+        if (dataKeysCount < 3) {
+          patientData = extractDataFromText(text);
+        }
+        
         resolve(patientData);
       } catch (error) {
         reject(new Error('Failed to parse text file'));
@@ -89,6 +125,170 @@ export async function parseTxtFile(file: File): Promise<Partial<PatientFormData>
     
     fileReader.readAsText(file);
   });
+}
+
+/**
+ * Parse a text file that follows a structured format with clear sections
+ */
+function parseStructuredTextFormat(text: string): Partial<PatientFormData> {
+  const patientData: Partial<PatientFormData> = {
+    rightEye: {
+      sph: 0,
+      cyl: 0,
+      axis: 0,
+      add: 0
+    },
+    leftEye: {
+      sph: 0,
+      cyl: 0,
+      axis: 0,
+      add: 0
+    },
+    pdType: "single"
+  };
+  
+  // Extract basic patient information
+  const lines = text.split('\n').map(line => line.trim());
+  
+  let currentSection = 'patient'; // Possible values: patient, right_eye, left_eye
+  
+  for (const line of lines) {
+    // Skip empty lines
+    if (!line) continue;
+    
+    // Detect section changes
+    if (line.match(/---\s*right\s*eye\s*---/i) || line.match(/od:/i)) {
+      currentSection = 'right_eye';
+      continue;
+    } else if (line.match(/---\s*left\s*eye\s*---/i) || line.match(/os:/i)) {
+      currentSection = 'left_eye';
+      continue;
+    } else if (line.match(/---\s*patient\s*---/i)) {
+      currentSection = 'patient';
+      continue;
+    }
+    
+    // Process based on current section
+    if (currentSection === 'patient') {
+      const [key, value] = line.split(':').map(part => part.trim());
+      if (!key || !value) continue;
+      
+      switch (key.toLowerCase()) {
+        case 'patient':
+        case 'name':
+        case 'patient name':
+          patientData.name = value;
+          break;
+        case 'phone':
+        case 'tel':
+        case 'telephone':
+          patientData.phone = value;
+          break;
+        case 'email':
+        case 'e-mail':
+          patientData.email = value;
+          break;
+        case 'location':
+        case 'address':
+        case 'city':
+          patientData.location = value;
+          break;
+        case 'dob':
+        case 'date of birth':
+        case 'birth date':
+          try {
+            const dobDate = new Date(value);
+            if (!isNaN(dobDate.getTime())) {
+              patientData.dob = dobDate.toISOString().split('T')[0];
+            }
+          } catch (e) {
+            // If date parsing fails, just store the raw value
+            patientData.dob = value;
+          }
+          break;
+        case 'exam date':
+        case 'examination date':
+        case 'date of examination':
+          try {
+            const examDate = new Date(value);
+            if (!isNaN(examDate.getTime())) {
+              patientData.examDate = examDate.toISOString().split('T')[0];
+            } else {
+              patientData.examDate = new Date().toISOString().split('T')[0];
+            }
+          } catch (e) {
+            patientData.examDate = new Date().toISOString().split('T')[0];
+          }
+          break;
+        case 'pd':
+        case 'pupillary distance':
+          if (value.toLowerCase().includes('dual')) {
+            patientData.pdType = 'dual';
+          } else {
+            const pdMatch = value.match(/(\d+\.?\d*)/);
+            if (pdMatch) {
+              patientData.pdType = 'single';
+              patientData.pd = parseFloat(pdMatch[1]);
+            }
+          }
+          break;
+        case 'pd od':
+        case 'right pd':
+          patientData.pdType = 'dual';
+          patientData.pdOd = parseFloat(value);
+          break;
+        case 'pd os':
+        case 'left pd':
+          patientData.pdType = 'dual';
+          patientData.pdOs = parseFloat(value);
+          break;
+      }
+    } else if (currentSection === 'right_eye') {
+      const [key, value] = line.split(':').map(part => part.trim());
+      if (!key || !value) continue;
+      
+      switch (key.toLowerCase()) {
+        case 'sph':
+        case 'sphere':
+          patientData.rightEye!.sph = parseFloat(value);
+          break;
+        case 'cyl':
+        case 'cylinder':
+          patientData.rightEye!.cyl = parseFloat(value);
+          break;
+        case 'axis':
+          patientData.rightEye!.axis = parseInt(value);
+          break;
+        case 'add':
+        case 'addition':
+          patientData.rightEye!.add = parseFloat(value);
+          break;
+      }
+    } else if (currentSection === 'left_eye') {
+      const [key, value] = line.split(':').map(part => part.trim());
+      if (!key || !value) continue;
+      
+      switch (key.toLowerCase()) {
+        case 'sph':
+        case 'sphere':
+          patientData.leftEye!.sph = parseFloat(value);
+          break;
+        case 'cyl':
+        case 'cylinder':
+          patientData.leftEye!.cyl = parseFloat(value);
+          break;
+        case 'axis':
+          patientData.leftEye!.axis = parseInt(value);
+          break;
+        case 'add':
+        case 'addition':
+          patientData.leftEye!.add = parseFloat(value);
+          break;
+      }
+    }
+  }
+  
+  return patientData;
 }
 
 /**
