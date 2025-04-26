@@ -89,8 +89,8 @@ export class MemStorage implements IStorage {
       ...insertPatient, 
       id,
       status: "pending",
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString()
+      createdAt: now,
+      updatedAt: now
     };
     
     this.patientsMap.set(id, patient);
@@ -108,7 +108,7 @@ export class MemStorage implements IStorage {
       ...existingPatient,
       ...updateData,
       id, // Ensure ID remains the same
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     };
     
     this.patientsMap.set(id, updatedPatient);
@@ -125,7 +125,7 @@ export class MemStorage implements IStorage {
     const updatedPatient: Patient = {
       ...existingPatient,
       status: status as "pending" | "reviewed",
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     };
     
     this.patientsMap.set(id, updatedPatient);

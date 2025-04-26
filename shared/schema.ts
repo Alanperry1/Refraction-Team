@@ -48,10 +48,10 @@ export const insertPatientSchema = createInsertSchema(patients).omit({
 
 // Extend to allow age to be passed in
 export const insertPatientWithAgeSchema = insertPatientSchema.extend({
-  age: z.number().optional(),
+  age: z.number(),
 });
 
-export type InsertPatient = z.infer<typeof insertPatientSchema>;
+export type InsertPatient = z.infer<typeof insertPatientWithAgeSchema>;
 export type Patient = typeof patients.$inferSelect;
 
 // For storing the security PIN

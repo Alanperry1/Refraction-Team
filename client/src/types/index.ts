@@ -27,7 +27,7 @@ export interface Patient {
   createdAt: string;
 }
 
-export type PatientFormData = Omit<Patient, "id" | "age" | "status" | "createdAt">;
+export type PatientFormData = Omit<Patient, "id" | "status" | "createdAt">;
 
 export interface DeleteDialogProps {
   isOpen: boolean;
@@ -53,6 +53,7 @@ export interface InsertPatient {
   email: string;
   location: string;
   dob: string;
+  age: number;
   examDate: string;
   rightEye: {
     sph: number;

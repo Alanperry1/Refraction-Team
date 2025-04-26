@@ -68,10 +68,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const age = calculateAge(validatedData.dob);
       
       // Create the patient
-      const newPatient = await storage.createPatient({
+      const patientWithAge = insertPatientWithAgeSchema.parse({
         ...validatedData,
         age
       });
+      
+      const newPatient = await storage.createPatient(patientWithAge);
       
       res.status(201).json(newPatient);
     } catch (error) {
@@ -95,11 +97,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate age based on date of birth
       const age = calculateAge(validatedData.dob);
       
-      // Update the patient
-      const updatedPatient = await storage.updatePatient(patientId, {
+      // Parse with extended schema to include age
+      const patientWithAge = insertPatientWithAgeSchema.parse({
         ...validatedData,
         age
       });
+      
+      // Update the patient
+      const updatedPatient = await storage.updatePatient(patientId, patientWithAge);
       
       if (!updatedPatient) {
         return res.status(404).json({ message: "Patient not found" });
