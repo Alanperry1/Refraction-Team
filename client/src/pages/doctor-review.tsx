@@ -75,10 +75,10 @@ export default function DoctorReview() {
 
     const options = {
       margin: 10,
-      filename: `prescription_${patient.name.replace(/\\s+/g, "_")}.pdf`,
+      filename: `prescription_${patient.name.replace(/\s+/g, "_")}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
     };
 
     html2pdf().set(options).from(prescriptionElement).save();
