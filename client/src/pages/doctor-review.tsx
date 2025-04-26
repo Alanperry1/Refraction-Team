@@ -118,53 +118,20 @@ export default function DoctorReview() {
     }
   };
 
-  // Generate AI recommendations
+  // Generate clinical recommendations
   const generateRecommendations = async () => {
     if (!patient) return;
 
     setIsLoadingAI(true);
     
     try {
-      // In a real implementation, this would call an actual LLM API
-      // For now, we'll simulate an AI response
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
-
-      const rightSph = patient.rightEye.sph;
-      const leftSph = patient.leftEye.sph;
-      const rightCyl = patient.rightEye.cyl;
-      const leftCyl = patient.leftEye.cyl;
-      const age = calculateAge(patient.dob);
-
-      let recommendation = "";
-
-      // Generate different recommendations based on the prescription values
-      if (Math.abs(rightSph) > 2 || Math.abs(leftSph) > 2) {
-        recommendation += "- High refractive error detected. Recommend high-index lenses to reduce thickness and weight.\n";
-      }
-
-      if (Math.abs(rightCyl) > 1.5 || Math.abs(leftCyl) > 1.5) {
-        recommendation += "- Consider aspheric lens design for better visual quality with this level of astigmatism.\n";
-      }
-
-      if (age > 40) {
-        recommendation += "- Progressive lenses recommended due to patient's age and potential presbyopia.\n";
-      }
-
-      if (Math.abs(rightSph - leftSph) > 2.0) {
-        recommendation += "- Significant anisometropia noted. Consider potential adaptation issues.\n";
-      }
-
-      if (recommendation === "") {
-        recommendation = "Standard single vision lenses with anti-reflective coating are appropriate for this prescription.";
-      } else {
-        recommendation += "\nAdditional recommendations:\n- Anti-reflective coating recommended for all lenses\n- UV protection important for outdoor activities\n- Follow-up in 12 months recommended";
-      }
-
+      const { generateRecommendation } = await import("@/types/recommendations");
+      const recommendation = await generateRecommendation({ patient });
       setAiRecommendation(recommendation);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to generate AI recommendations",
+        description: "Failed to generate clinical recommendations",
         variant: "destructive",
       });
     } finally {
@@ -394,7 +361,7 @@ export default function DoctorReview() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">AI Recommendations</h2>
+                  <h2 className="text-xl font-bold">Clinical Recommendations</h2>
                   <Button 
                     variant="outline" 
                     onClick={generateRecommendations} 
@@ -423,8 +390,8 @@ export default function DoctorReview() {
                       variant="ghost" 
                       className="mt-2"
                       onClick={() => setDoctorNotes(prev => 
-                        prev ? `${prev}\n\n--- AI RECOMMENDATION ---\n${aiRecommendation}` : 
-                        `AI RECOMMENDATION:\n${aiRecommendation}`
+                        prev ? `${prev}\n\n--- CLINICAL RECOMMENDATIONS ---\n${aiRecommendation}` : 
+                        `CLINICAL RECOMMENDATIONS:\n${aiRecommendation}`
                       )}
                     >
                       Add to Notes
@@ -432,7 +399,7 @@ export default function DoctorReview() {
                   </div>
                 ) : (
                   <div className="bg-gray-50 p-4 rounded text-center text-gray-500">
-                    Click "Generate" to get AI-powered recommendations based on this prescription
+                    Click "Generate" to get professional clinical recommendations based on this prescription
                   </div>
                 )}
               </CardContent>
