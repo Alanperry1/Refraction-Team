@@ -54,7 +54,24 @@ export default function PatientForm() {
   // Set form data when patient data is loaded
   useEffect(() => {
     if (patientData) {
-      setFormData(patientData);
+      const formDataFromPatient: PatientFormData = {
+        name: patientData.name,
+        phone: patientData.phone,
+        email: patientData.email,
+        location: patientData.location,
+        dob: patientData.dob,
+        age: patientData.age,
+        examDate: patientData.examDate,
+        rightEye: patientData.rightEye,
+        leftEye: patientData.leftEye,
+        pdType: patientData.pdType,
+        pd: patientData.pd,
+        pdOd: patientData.pdOd,
+        pdOs: patientData.pdOs
+      };
+      
+      setFormData(formDataFromPatient);
+      
       if (patientData.dob) {
         setAge(calculateAge(patientData.dob));
       }
@@ -114,12 +131,15 @@ export default function PatientForm() {
     }
     
     // Prepare data for submission
+    const calculatedAge = formData.dob ? calculateAge(formData.dob) : 0;
+    
     const patientData: InsertPatient = {
       name: formData.name,
       phone: formData.phone,
       email: formData.email,
       location: formData.location,
       dob: formData.dob,
+      age: calculatedAge,
       examDate: formData.examDate,
       rightEye: formData.rightEye,
       leftEye: formData.leftEye,
