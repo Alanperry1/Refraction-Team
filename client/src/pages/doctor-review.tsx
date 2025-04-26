@@ -11,12 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { initEmailJS, sendPrescriptionEmail } from "@/lib/email-service";
+import { initSmsService, sendPrescriptionSms } from "@/lib/sms-service";
 import { Input } from "@/components/ui/input";
 import html2pdf from "html2pdf.js";
-import { Check, Loader2, Mail, ArrowLeft, Download, FileText } from "lucide-react";
+import { Check, Loader2, Mail, ArrowLeft, Download, FileText, MessageSquare, Save } from "lucide-react";
 
-// Initialize EmailJS
+// Initialize services
 initEmailJS();
+initSmsService();
 
 export default function DoctorReview() {
   const { id } = useParams();
@@ -25,10 +27,14 @@ export default function DoctorReview() {
   const [doctorNotes, setDoctorNotes] = useState("");
   const [doctorSignature, setDoctorSignature] = useState("");
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showSmsDialog, setShowSmsDialog] = useState(false);
   const [emailRecipient, setEmailRecipient] = useState("");
+  const [smsRecipient, setSmsRecipient] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendingSms, setSendingSms] = useState(false);
   const [aiRecommendation, setAiRecommendation] = useState("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [savedRecommendations, setSavedRecommendations] = useState<Record<string, string>>({});
 
   const patientId = parseInt(id || "0");
 
@@ -38,10 +44,13 @@ export default function DoctorReview() {
     enabled: patientId > 0,
   });
 
-  // Set default email recipient when patient data is loaded
+  // Set default email and SMS recipients when patient data is loaded
   useEffect(() => {
     if (patient?.email) {
       setEmailRecipient(patient.email);
+    }
+    if (patient?.phone) {
+      setSmsRecipient(patient.phone);
     }
   }, [patient]);
 
@@ -115,6 +124,39 @@ export default function DoctorReview() {
       });
     } finally {
       setSendingEmail(false);
+    }
+  };
+  
+  // Handle sending SMS with prescription
+  const handleSendSms = async () => {
+    if (!patient) return;
+    
+    setSendingSms(true);
+    
+    try {
+      const result = await sendPrescriptionSms(
+        patient,
+        smsRecipient,
+        doctorNotes
+      );
+      
+      if (result.success) {
+        toast({
+          title: "SMS Sent",
+          description: "The prescription SMS has been sent successfully.",
+        });
+        setShowSmsDialog(false);
+      } else {
+        throw new Error(result.error || "Failed to send SMS");
+      }
+    } catch (error) {
+      toast({
+        title: "SMS Error",
+        description: error instanceof Error ? error.message : "Failed to send SMS",
+        variant: "destructive", 
+      });
+    } finally {
+      setSendingSms(false);
     }
   };
 
@@ -312,6 +354,10 @@ export default function DoctorReview() {
                 <Mail className="h-4 w-4 mr-2" />
                 Send via Email
               </Button>
+              <Button variant="outline" onClick={() => setShowSmsDialog(true)} className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Send via SMS
+              </Button>
               {patient.status !== "reviewed" && (
                 <Button 
                   variant="secondary" 
@@ -460,6 +506,71 @@ export default function DoctorReview() {
                 <span className="flex items-center">
                   <Mail className="h-4 w-4 mr-2" />
                   Send Email
+                </span>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* SMS Dialog */}
+      <Dialog open={showSmsDialog} onOpenChange={setShowSmsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Prescription via SMS</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="sms-recipient">Recipient Phone Number</Label>
+              <Input
+                id="sms-recipient"
+                type="tel"
+                value={smsRecipient}
+                onChange={(e) => setSmsRecipient(e.target.value)}
+                placeholder="+1 (555) 123-4567"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter the number in international format (+1XXXXXXXXXX for US)
+              </p>
+            </div>
+            <div>
+              <Label>SMS Contents</Label>
+              <div className="mt-2 bg-gray-50 p-3 rounded-md text-sm">
+                <p><strong>From:</strong> TheRefraction</p>
+                <p className="mt-2"><strong>Includes:</strong></p>
+                <ul className="list-disc list-inside ml-2">
+                  <li>Patient name and basic prescription details</li>
+                  <li>Key measurements for both eyes</li>
+                  <li>Doctor's notes (if provided)</li>
+                </ul>
+                <p className="text-xs text-gray-500 mt-2">
+                  Note: SMS has limited character space. Only essential information will be included.
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSmsDialog(false)}
+              disabled={sendingSms}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSendSms}
+              disabled={!smsRecipient || sendingSms}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {sendingSms ? (
+                <span className="flex items-center">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Send SMS
                 </span>
               )}
             </Button>
