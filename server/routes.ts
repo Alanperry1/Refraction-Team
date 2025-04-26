@@ -18,6 +18,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
+  // Create a default admin user if no users exist
+  const adminUser = await storage.getUserByUsername("admin");
+  if (!adminUser) {
+    // Import the password hashing function from auth.ts
+    const { hashPassword } = await import("./auth");
+    await storage.createUser({
+      username: "admin",
+      password: await hashPassword("admin")
+    });
+    console.log("Default admin user created: admin/admin");
+  }
+  
   // Get all patients
   app.get("/api/patients", async (req, res) => {
     try {
