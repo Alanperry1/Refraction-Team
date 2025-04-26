@@ -11,12 +11,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup auth routes (login, register, logout, get user)
   setupAuth(app);
   
-  // Initialize SendGrid if API key is present
-  if (process.env.SENDGRID_API_KEY) {
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    console.log("SendGrid initialized with API key");
+  // Initialize Mailjet if API keys are present
+  let mailjetClient: any = null;
+  if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
+    mailjetClient = Mailjet.apiConnect(
+      process.env.MAILJET_API_KEY,
+      process.env.MAILJET_SECRET_KEY
+    );
+    console.log("Mailjet initialized with API keys");
   } else {
-    console.log("SendGrid API key not found. Email functionality will be simulated.");
+    console.log("Mailjet API keys not found. Email functionality will be simulated.");
   }
   
   // Initialize with a default security PIN if not exists
@@ -245,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Send Email via SendGrid
+  // Send Email via Mailjet
   app.post("/api/email/send", async (req, res) => {
     // Check authentication
     if (!req.isAuthenticated()) {
@@ -266,8 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid email format" });
       }
       
-      // If SendGrid API key not configured, simulate sending
-      if (!process.env.SENDGRID_API_KEY) {
+      // If Mailjet API keys not configured, simulate sending
+      if (!mailjetClient) {
         console.log(`Simulating email send to ${to} for ${patientName}`);
         
         // Simulate a delay
@@ -279,19 +283,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Prepare the email message
-      const message = {
-        to,
-        from: 'no-reply@therefractionapp.com', // Use a verified sender email
-        subject,
-        html,
+      // Prepare the email message for Mailjet
+      const data = {
+        Messages: [
+          {
+            From: {
+              Email: "no-reply@therefractionapp.com",
+              Name: "The Refraction Team"
+            },
+            To: [
+              {
+                Email: to,
+                Name: patientName || "Patient"
+              }
+            ],
+            Subject: subject,
+            HTMLPart: html
+          }
+        ]
       };
       
-      // Send the email
-      await sgMail.send(message);
+      // Send the email using Mailjet
+      const result = await mailjetClient.post("send", { version: "v3.1" }).request(data);
       console.log(`Email sent to ${to} for ${patientName}`);
       
-      res.status(200).json({ message: "Email sent successfully" });
+      res.status(200).json({ 
+        message: "Email sent successfully", 
+        mailjetResponse: result.body
+      });
     } catch (error) {
       console.error("Error sending email:", error);
       res.status(500).json({ 
