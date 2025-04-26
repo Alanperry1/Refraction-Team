@@ -255,26 +255,23 @@ export default function PatientForm() {
                         <details className="text-xs text-blue-700">
                           <summary className="cursor-pointer font-medium">View sample text format</summary>
                           <pre className="mt-1 p-2 bg-blue-100 rounded whitespace-pre-wrap text-[10px] leading-tight">
-Patient: John Doe
-Phone: (555) 123-4567
-Email: john@example.com
-Location: New York, NY
-DOB: 1985-05-15
-Exam Date: 2025-04-25
+PATIENT PRESCRIPTION
 
---- Right Eye ---
-SPH: -2.25
-CYL: -0.75
-AXIS: 180
-ADD: +1.50
+RIGHT EYE (OD):
+SPH1: -2.50
+CYL1: +0.75
+AXIS1: 180
+ADD1: -3.00
+PD: 32.5mm
 
---- Left Eye ---
-SPH: -2.00
-CYL: -0.50
-AXIS: 175
-ADD: +1.50
+LEFT EYE (OS):
+SPH2: +2.75
+CYL2: -0.50
+AXIS2: 170
+ADD2: +2.00
+PD: 31.5mm
 
-PD: 64
+PUPILLARY DISTANCE: 64mm (Dual)
                           </pre>
                         </details>
                       </div>

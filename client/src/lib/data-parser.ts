@@ -151,16 +151,154 @@ function parseStructuredTextFormat(text: string): Partial<PatientFormData> {
   const lines = text.split('\n').map(line => line.trim());
   
   let currentSection = 'patient'; // Possible values: patient, right_eye, left_eye
+  let patientNameFromHeader = "";
   
+  // Check for the specific format with PATIENT PRESCRIPTION header and RIGHT/LEFT EYE sections
+  const prescriptionHeaderIndex = lines.findIndex(line => 
+    line.toUpperCase().includes('PATIENT PRESCRIPTION'));
+  
+  const rightEyeHeaderIndex = lines.findIndex(line => 
+    line.toUpperCase().includes('RIGHT EYE') || line.toUpperCase().includes('OD'));
+  
+  const leftEyeHeaderIndex = lines.findIndex(line => 
+    line.toUpperCase().includes('LEFT EYE') || line.toUpperCase().includes('OS'));
+  
+  // Check if we're dealing with the specific format
+  const isSpecificFormat = prescriptionHeaderIndex !== -1 && 
+                          rightEyeHeaderIndex !== -1 && 
+                          leftEyeHeaderIndex !== -1;
+  
+  if (isSpecificFormat) {
+    // This is the specific format from sample_prescription.txt
+    // Extract right eye data
+    for (let i = rightEyeHeaderIndex + 1; i < leftEyeHeaderIndex; i++) {
+      if (!lines[i]) continue;
+      
+      // Extract SPH1, CYL1, AXIS1, ADD1
+      const sph1Match = lines[i].match(/SPH1:\s*([-+]?\d+\.?\d*)/i);
+      if (sph1Match) {
+        patientData.rightEye!.sph = parseFloat(sph1Match[1]);
+        continue;
+      }
+      
+      const cyl1Match = lines[i].match(/CYL1:\s*([-+]?\d+\.?\d*)/i);
+      if (cyl1Match) {
+        patientData.rightEye!.cyl = parseFloat(cyl1Match[1]);
+        continue;
+      }
+      
+      const axis1Match = lines[i].match(/AXIS1:\s*(\d+)/i);
+      if (axis1Match) {
+        patientData.rightEye!.axis = parseInt(axis1Match[1]);
+        continue;
+      }
+      
+      const add1Match = lines[i].match(/ADD1:\s*([-+]?\d+\.?\d*)/i);
+      if (add1Match) {
+        patientData.rightEye!.add = parseFloat(add1Match[1]);
+        continue;
+      }
+      
+      // Check for OD PD
+      const pdMatch = lines[i].match(/PD:\s*([\d.]+)mm/i);
+      if (pdMatch) {
+        patientData.pdType = 'dual';
+        patientData.pdOd = parseFloat(pdMatch[1]);
+      }
+    }
+    
+    // Extract left eye data
+    const pupillaryDistanceIndex = lines.findIndex(line => 
+      line.toUpperCase().includes('PUPILLARY DISTANCE'));
+      
+    const leftEyeEndIndex = pupillaryDistanceIndex !== -1 ? 
+                           pupillaryDistanceIndex : lines.length;
+    
+    for (let i = leftEyeHeaderIndex + 1; i < leftEyeEndIndex; i++) {
+      if (!lines[i]) continue;
+      
+      // Extract SPH2, CYL2, AXIS2, ADD2
+      const sph2Match = lines[i].match(/SPH2:\s*([-+]?\d+\.?\d*)/i);
+      if (sph2Match) {
+        patientData.leftEye!.sph = parseFloat(sph2Match[1]);
+        continue;
+      }
+      
+      const cyl2Match = lines[i].match(/CYL2:\s*([-+]?\d+\.?\d*)/i);
+      if (cyl2Match) {
+        patientData.leftEye!.cyl = parseFloat(cyl2Match[1]);
+        continue;
+      }
+      
+      const axis2Match = lines[i].match(/AXIS2:\s*(\d+)/i);
+      if (axis2Match) {
+        patientData.leftEye!.axis = parseInt(axis2Match[1]);
+        continue;
+      }
+      
+      const add2Match = lines[i].match(/ADD2:\s*([-+]?\d+\.?\d*)/i);
+      if (add2Match) {
+        patientData.leftEye!.add = parseFloat(add2Match[1]);
+        continue;
+      }
+      
+      // Check for OS PD
+      const pdMatch = lines[i].match(/PD:\s*([\d.]+)mm/i);
+      if (pdMatch) {
+        patientData.pdType = 'dual';
+        patientData.pdOs = parseFloat(pdMatch[1]);
+      }
+    }
+    
+    // Extract total PD
+    if (pupillaryDistanceIndex !== -1) {
+      const pdLine = lines[pupillaryDistanceIndex];
+      const pdMatch = pdLine.match(/PUPILLARY DISTANCE:\s*([\d.]+)mm/i);
+      
+      if (pdMatch) {
+        // If we already have dual PD values, keep them. Otherwise set as single PD
+        if (patientData.pdType !== 'dual') {
+          patientData.pdType = 'single';
+          patientData.pd = parseFloat(pdMatch[1]);
+        }
+        
+        // Check if it's explicitly marked as dual
+        if (pdLine.toLowerCase().includes('dual')) {
+          patientData.pdType = 'dual';
+          
+          // If we don't have individual values, calculate them
+          if (!patientData.pdOd || !patientData.pdOs) {
+            const totalPd = parseFloat(pdMatch[1]);
+            patientData.pdOd = Math.round(totalPd / 2 * 10) / 10;
+            patientData.pdOs = Math.round(totalPd / 2 * 10) / 10;
+          }
+        }
+      }
+    }
+    
+    // Set default name if none provided
+    if (!patientData.name) {
+      patientData.name = "Patient from Prescription";
+    }
+    
+    // Set default examination date to today
+    if (!patientData.examDate) {
+      patientData.examDate = new Date().toISOString().split('T')[0];
+    }
+    
+    return patientData;
+  }
+  
+  // If not the specific format, process with the original section-based approach
   for (const line of lines) {
     // Skip empty lines
     if (!line) continue;
     
     // Detect section changes
-    if (line.match(/---\s*right\s*eye\s*---/i) || line.match(/od:/i)) {
+    if (line.match(/---\s*right\s*eye\s*---/i) || line.match(/right\s*eye\s*\(od\)/i)) {
       currentSection = 'right_eye';
       continue;
-    } else if (line.match(/---\s*left\s*eye\s*---/i) || line.match(/os:/i)) {
+    } else if (line.match(/---\s*left\s*eye\s*---/i) || line.match(/left\s*eye\s*\(os\)/i)) {
       currentSection = 'left_eye';
       continue;
     } else if (line.match(/---\s*patient\s*---/i)) {
@@ -244,46 +382,54 @@ function parseStructuredTextFormat(text: string): Partial<PatientFormData> {
           break;
       }
     } else if (currentSection === 'right_eye') {
-      const [key, value] = line.split(':').map(part => part.trim());
-      if (!key || !value) continue;
+      // Try to match both formats: SPH: value and SPH1: value
+      const sphMatch = line.match(/SPH1?:\s*([-+]?\d+\.?\d*)/i);
+      if (sphMatch) {
+        patientData.rightEye!.sph = parseFloat(sphMatch[1]);
+        continue;
+      }
       
-      switch (key.toLowerCase()) {
-        case 'sph':
-        case 'sphere':
-          patientData.rightEye!.sph = parseFloat(value);
-          break;
-        case 'cyl':
-        case 'cylinder':
-          patientData.rightEye!.cyl = parseFloat(value);
-          break;
-        case 'axis':
-          patientData.rightEye!.axis = parseInt(value);
-          break;
-        case 'add':
-        case 'addition':
-          patientData.rightEye!.add = parseFloat(value);
-          break;
+      const cylMatch = line.match(/CYL1?:\s*([-+]?\d+\.?\d*)/i);
+      if (cylMatch) {
+        patientData.rightEye!.cyl = parseFloat(cylMatch[1]);
+        continue;
+      }
+      
+      const axisMatch = line.match(/AXIS1?:\s*(\d+)/i);
+      if (axisMatch) {
+        patientData.rightEye!.axis = parseInt(axisMatch[1]);
+        continue;
+      }
+      
+      const addMatch = line.match(/ADD1?:\s*([-+]?\d+\.?\d*)/i);
+      if (addMatch) {
+        patientData.rightEye!.add = parseFloat(addMatch[1]);
+        continue;
       }
     } else if (currentSection === 'left_eye') {
-      const [key, value] = line.split(':').map(part => part.trim());
-      if (!key || !value) continue;
+      // Try to match both formats: SPH: value and SPH2: value
+      const sphMatch = line.match(/SPH2?:\s*([-+]?\d+\.?\d*)/i);
+      if (sphMatch) {
+        patientData.leftEye!.sph = parseFloat(sphMatch[1]);
+        continue;
+      }
       
-      switch (key.toLowerCase()) {
-        case 'sph':
-        case 'sphere':
-          patientData.leftEye!.sph = parseFloat(value);
-          break;
-        case 'cyl':
-        case 'cylinder':
-          patientData.leftEye!.cyl = parseFloat(value);
-          break;
-        case 'axis':
-          patientData.leftEye!.axis = parseInt(value);
-          break;
-        case 'add':
-        case 'addition':
-          patientData.leftEye!.add = parseFloat(value);
-          break;
+      const cylMatch = line.match(/CYL2?:\s*([-+]?\d+\.?\d*)/i);
+      if (cylMatch) {
+        patientData.leftEye!.cyl = parseFloat(cylMatch[1]);
+        continue;
+      }
+      
+      const axisMatch = line.match(/AXIS2?:\s*(\d+)/i);
+      if (axisMatch) {
+        patientData.leftEye!.axis = parseInt(axisMatch[1]);
+        continue;
+      }
+      
+      const addMatch = line.match(/ADD2?:\s*([-+]?\d+\.?\d*)/i);
+      if (addMatch) {
+        patientData.leftEye!.add = parseFloat(addMatch[1]);
+        continue;
       }
     }
   }
