@@ -9,6 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import PrescriptionDisplay from "@/components/shared/prescription-display";
+import PinVerificationDialog from "@/components/shared/pin-verification-dialog";
 
 export default function PatientDetails() {
   const [, setLocation] = useLocation();
@@ -18,6 +19,7 @@ export default function PatientDetails() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const detailsRef = useRef<HTMLDivElement>(null);
   
   // Fetch patient details

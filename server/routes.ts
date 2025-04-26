@@ -178,6 +178,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Verify doctor PIN
+  app.post("/api/verify-doctor", async (req, res) => {
+    try {
+      const { pin } = req.body;
+      
+      if (!pin) {
+        return res.status(400).json({ message: "PIN is required" });
+      }
+      
+      const securitySettings = await storage.getSecuritySettings();
+      
+      if (!securitySettings) {
+        return res.status(404).json({ message: "Security settings not found" });
+      }
+      
+      const isValid = pin === securitySettings.securityPin;
+      
+      if (!isValid) {
+        return res.status(403).json({ message: "Invalid PIN" });
+      }
+      
+      // Set a session flag to indicate verified doctor
+      if (req.session) {
+        req.session.isDoctorVerified = true;
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error verifying doctor PIN:", error);
+      res.status(500).json({ message: "Failed to verify doctor PIN" });
+    }
+  });
+  
+  // Check if doctor is verified
+  app.get("/api/doctor-status", (req, res) => {
+    const isVerified = req.session?.isDoctorVerified === true;
+    res.json({ verified: isVerified });
+  });
+  
   // Update security PIN
   app.patch("/api/security-settings", async (req, res) => {
     try {
