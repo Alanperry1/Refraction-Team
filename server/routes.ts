@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { calculateAge } from "../client/src/lib/utils";
 import { z } from "zod";
-import { insertPatientSchema, insertSecuritySettingsSchema } from "@shared/schema";
+import { insertPatientSchema, insertPatientWithAgeSchema, insertSecuritySettingsSchema } from "@shared/schema";
 import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {

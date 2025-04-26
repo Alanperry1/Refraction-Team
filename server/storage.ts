@@ -25,14 +25,14 @@ export interface IStorage {
   createSecuritySettings(settings: InsertSecuritySettings): Promise<SecuritySettings>;
   updateSecuritySettings(settings: InsertSecuritySettings): Promise<SecuritySettings>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private patientsMap: Map<number, Patient>;
   private securitySettingsMap: Map<number, SecuritySettings>;
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
   currentUserId: number;
   currentPatientId: number;
   currentSecuritySettingsId: number;
@@ -167,4 +167,6 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Use DatabaseStorage instead of MemStorage
+import { DatabaseStorage } from "./database-storage";
+export const storage = new DatabaseStorage();

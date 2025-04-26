@@ -38,12 +38,17 @@ export const patients = pgTable("patients", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Create insert schema without the auto-generated fields
 export const insertPatientSchema = createInsertSchema(patients).omit({
   id: true,
-  age: true,
   status: true,
   createdAt: true,
   updatedAt: true,
+});
+
+// Extend to allow age to be passed in
+export const insertPatientWithAgeSchema = insertPatientSchema.extend({
+  age: z.number().optional(),
 });
 
 export type InsertPatient = z.infer<typeof insertPatientSchema>;
