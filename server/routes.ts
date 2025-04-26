@@ -5,10 +5,19 @@ import { calculateAge } from "../client/src/lib/utils";
 import { z } from "zod";
 import { insertPatientSchema, insertPatientWithAgeSchema, insertSecuritySettingsSchema } from "@shared/schema";
 import { setupAuth } from "./auth";
+import Mailjet from 'node-mailjet';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup auth routes (login, register, logout, get user)
   setupAuth(app);
+  
+  // Initialize SendGrid if API key is present
+  if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    console.log("SendGrid initialized with API key");
+  } else {
+    console.log("SendGrid API key not found. Email functionality will be simulated.");
+  }
   
   // Initialize with a default security PIN if not exists
   const securitySettings = await storage.getSecuritySettings();
@@ -233,6 +242,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.error("Error updating security settings:", error);
       res.status(500).json({ message: "Failed to update security settings" });
+    }
+  });
+  
+  // Send Email via SendGrid
+  app.post("/api/email/send", async (req, res) => {
+    // Check authentication
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const { to, subject, html, patientName } = req.body;
+      
+      // Validate required fields
+      if (!to || !subject || !html) {
+        return res.status(400).json({ message: "Missing required fields: to, subject, html" });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(to)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+      
+      // If SendGrid API key not configured, simulate sending
+      if (!process.env.SENDGRID_API_KEY) {
+        console.log(`Simulating email send to ${to} for ${patientName}`);
+        
+        // Simulate a delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        return res.status(200).json({ 
+          message: "Email simulated successfully",
+          simulated: true
+        });
+      }
+      
+      // Prepare the email message
+      const message = {
+        to,
+        from: 'no-reply@therefractionapp.com', // Use a verified sender email
+        subject,
+        html,
+      };
+      
+      // Send the email
+      await sgMail.send(message);
+      console.log(`Email sent to ${to} for ${patientName}`);
+      
+      res.status(200).json({ message: "Email sent successfully" });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ 
+        message: "Failed to send email", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
   

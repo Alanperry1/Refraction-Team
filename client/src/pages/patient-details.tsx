@@ -206,7 +206,7 @@ export default function PatientDetails() {
     }
   };
   
-  // Send prescription via email
+  // Send prescription via email using SendGrid
   const sendEmail = async () => {
     if (!patient) return;
     
@@ -215,12 +215,6 @@ export default function PatientDetails() {
       setEmailProgress(0);
       setEmailStatus("Preparing email...");
       setEmailError("");
-      
-      // Convert the prescription to PDF using html2pdf
-      const element = detailsRef.current;
-      if (!element) {
-        throw new Error("Cannot find prescription element");
-      }
       
       // Simulate progress
       const progressInterval = setInterval(() => {
@@ -236,63 +230,43 @@ export default function PatientDetails() {
       
       setEmailStatus("Sending email...");
       
-      // Use EmailJS to send the email
-      // Initialize the EmailJS library (should be done in main.tsx)
-      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_8w0bht4";
-      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_bkr29b6";
+      // Import sendPrescriptionEmail from sendgrid-service
+      const { sendPrescriptionEmail } = await import('@/lib/sendgrid-service');
       
-      const patientName = patient.name;
+      // Get patient email
       const patientEmail = patient.email;
-      const examDate = formatDate(patient.examDate);
       
-      // Prepare prescription text for email
-      const prescriptionDetails = `
-        Right Eye (OD):
-        - SPH: ${patient.rightEye.sph}
-        - CYL: ${patient.rightEye.cyl}
-        - AXIS: ${patient.rightEye.axis}
-        - ADD: ${patient.rightEye.add}
-        
-        Left Eye (OS):
-        - SPH: ${patient.leftEye.sph}
-        - CYL: ${patient.leftEye.cyl}
-        - AXIS: ${patient.leftEye.axis}
-        - ADD: ${patient.leftEye.add}
-        
-        ${patient.pdType === "single" 
-          ? `Pupillary Distance: ${patient.pd} mm` 
-          : `Pupillary Distance: Right: ${patient.pdOd} mm, Left: ${patient.pdOs} mm`
-        }
-      `;
-      
-      // Send the email using EmailJS
-      await (window as any).emailjs.send(serviceId, templateId, {
-        to_name: patientName,
-        to_email: patientEmail,
-        prescription_details: prescriptionDetails,
-        exam_date: examDate,
-      });
+      // Send the email using SendGrid API
+      const result = await sendPrescriptionEmail(
+        patient,
+        patientEmail
+      );
       
       clearInterval(progressInterval);
-      setEmailProgress(100);
-      setEmailStatus("Email sent successfully!");
       
-      // Mark as reviewed when emailed
-      if (patient?.status !== "reviewed") {
-        updateStatusMutation.mutate();
+      if (result.success) {
+        setEmailProgress(100);
+        setEmailStatus("Email sent successfully!");
+        
+        // Mark as reviewed when emailed
+        if (patient?.status !== "reviewed") {
+          updateStatusMutation.mutate();
+        }
+        
+        toast({
+          title: "Email Sent",
+          description: `Prescription has been sent to ${patientEmail}.`
+        });
+        
+        // Reset status after 3 seconds
+        setTimeout(() => {
+          setIsSendingEmail(false);
+          setEmailStatus("");
+          setEmailProgress(0);
+        }, 3000);
+      } else {
+        throw new Error(result.error || "Failed to send email");
       }
-      
-      toast({
-        title: "Email Sent",
-        description: `Prescription has been sent to ${patientEmail}.`
-      });
-      
-      // Reset status after 3 seconds
-      setTimeout(() => {
-        setIsSendingEmail(false);
-        setEmailStatus("");
-        setEmailProgress(0);
-      }, 3000);
       
     } catch (error) {
       setEmailError(`Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -473,11 +447,23 @@ export default function PatientDetails() {
               </Button>
               <Button 
                 variant="secondary"
-                onClick={() => setLocation(`/doctor/review/${params.id}`)}
+                onClick={() => setIsPinDialogOpen(true)}
               >
                 <i className="ri-stethoscope-line mr-2"></i>
                 Doctor Review
               </Button>
+              
+              {/* PIN Verification Dialog */}
+              <PinVerificationDialog
+                isOpen={isPinDialogOpen}
+                onClose={() => setIsPinDialogOpen(false)}
+                onSuccess={() => {
+                  // Navigate to doctor review page after successful PIN verification
+                  setLocation(`/doctor/review/${params.id}`);
+                }}
+                title="Doctor Authentication Required"
+                description="Please enter your security PIN to access the doctor review interface. This ensures only authorized personnel can provide clinical recommendations."
+              />
             </div>
           </div>
         </CardContent>
