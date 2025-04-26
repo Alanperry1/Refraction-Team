@@ -34,7 +34,7 @@ export default function DashboardPage() {
             )}
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-blue-50 rounded-lg p-6 text-center flex flex-col items-center">
               <div className="flex items-center justify-center h-14 w-14 rounded-full bg-primary-100 text-primary-600 mb-4">
                 <i className="ri-user-add-line text-2xl"></i>
@@ -62,6 +62,21 @@ export default function DashboardPage() {
               >
                 <i className="ri-eye-line mr-2"></i>
                 View Records
+              </Button>
+            </div>
+            
+            <div className="bg-purple-50 rounded-lg p-6 text-center flex flex-col items-center">
+              <div className="flex items-center justify-center h-14 w-14 rounded-full bg-purple-100 text-purple-600 mb-4">
+                <i className="ri-stethoscope-line text-2xl"></i>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">Doctor Review</h3>
+              <p className="mt-2 text-sm text-gray-600">Review prescriptions and generate recommendations</p>
+              <Button 
+                className="mt-5 bg-purple-600 hover:bg-purple-700"
+                onClick={() => setLocation('/patients')}
+              >
+                <i className="ri-microscope-line mr-2"></i>
+                Review Patients
               </Button>
             </div>
           </div>

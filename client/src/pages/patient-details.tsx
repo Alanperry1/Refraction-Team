@@ -469,6 +469,13 @@ export default function PatientDetails() {
                   </>
                 )}
               </Button>
+              <Button 
+                variant="secondary"
+                onClick={() => setLocation(`/doctor/review/${params.id}`)}
+              >
+                <i className="ri-stethoscope-line mr-2"></i>
+                Doctor Review
+              </Button>
             </div>
           </div>
         </CardContent>
