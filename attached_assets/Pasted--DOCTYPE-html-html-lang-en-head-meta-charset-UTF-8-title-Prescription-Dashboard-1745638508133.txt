@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prescription Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #83a4d4, #b6fbff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      padding: 30px;
+      transition: 0.3s ease;
+      width: 90%;
+      max-width: 1200px;
+      margin: 20px auto;
+    }
+    .hidden { display: none; }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .btn { 
+      background: #007bff; 
+      color: white; 
+      font-weight: bold; 
+      cursor: pointer; 
+      border: none; 
+      transition: 0.2s ease-in-out;
+      margin-top: 15px;
+    }
+    .btn:hover { background: #0056b3; }
+    .form-row { display: flex; gap: 20px; flex-wrap: wrap; }
+    .form-section {
+      flex: 1;
+      min-width: 250px;
+      padding: 0 10px;
+    }
+    .date-group {
+      margin-bottom: 15px;
+    }
+    .date-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666;
+      font-size: 0.9em;
+    }
+    .age-display {
+      color: #666;
+      font-size: 0.9em;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+    .pd-options {
+      margin-top: 15px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    .pd-duplicate-form {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f0f8ff;
+      border-radius: 8px;
+      border: 1px solid #d0e0ff;
+    }
+    .pd-options label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    .pd-options input[type="radio"] {
+      width: auto;
+      margin-right: 10px;
+    }
+    .pd-input-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .pd-input-group input {
+      flex: 1;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+    .details-btn { 
+      background-color: #28a745; 
+      color: white; 
+      border: none; 
+      padding: 5px 10px; 
+      cursor: pointer; 
+      border-radius: 4px; 
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+      text-align: center;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+    .status-pending {
+      background-color: #ffc107;
+      color: #000;
+    }
+    .status-reviewed {
+      background-color: #28a745;
+      color: #fff;
+    }
+    .delete-confirm {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      display: none;
+    }
+    .delete-confirm input {
+      margin: 10px 0;
+    }
+    .delete-confirm button {
+      margin: 5px;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .delete-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .delete-btn:hover {
+      background-color: #c82333;
+    }
+    .progress-container {
+      width: 100%;
+      height: 20px;
+      background-color: #f0f0f0;
+      border-radius: 10px;
+      margin: 10px 0;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: #007bff;
+      transition: width 0.3s ease;
+    }
+    .status-text {
+      text-align: center;
+      margin: 5px 0;
+      color: #666;
+      font-size: 0.9em;
+    }
+    .error-message {
+      color: #dc3545;
+      text-align: center;
+      margin: 10px 0;
+      display: none;
+    }
+    .edit-confirm {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      display: none;
+    }
+    .edit-confirm input {
+      margin: 10px 0;
+    }
+    .edit-confirm button {
+      margin: 5px;
+    }
+    .edit-btn {
+      background-color: #ffc107;
+      color: #000;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      margin: 0 5px;
+    }
+    .edit-btn:hover {
+      background-color: #e0a800;
+    }
+    .copy-btn {
+      background-color: #6c757d;
+      margin-top: 10px;
+      font-size: 0.9em;
+      padding: 8px;
+    }
+    .copy-btn:hover {
+      background-color: #5a6268;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card" id="login-box">
+  <h2>Login</h2>
+  <input type="text" id="username" placeholder="Username" required />
+  <input type="password" id="password" placeholder="Password" required />
+  <button class="btn" onclick="authenticate()">Login</button>
+</div>
+
+<div class="card hidden" id="dashboard-box">
+  <h2>Welcome!</h2>
+  <button class="btn" onclick="showForm()">➕ Create New Patient</button>
+  <button class="btn" onclick="showView()">📋 View Patient Records</button>
+</div>
+
+<div class="card hidden" id="form-box">
+  <h2>New Patient Form</h2>
+  <div class="form-row">
+    <div class="form-section">
+      <h3>Import Patient Data</h3>
+      <input type="file" id="patientFile" accept=".pdf,.docx,.txt" onchange="parsePatientFile(event)" />
+      <p style="font-size: 0.8em; color: #666; margin-top: 5px;">Upload a PDF, Word document, or text file with patient data</p>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-section">
+      <input type="text" id="name" placeholder="Full Name" required />
+      <input type="tel" id="phone" placeholder="Phone Number" required />
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="text" id="location" placeholder="Location" required />
+    </div>
+    <div class="form-section">
+      <div class="date-group">
+        <label for="dob">Date of Birth</label>
+        <input type="date" id="dob" required onchange="calculateAge()" />
+        <div id="age-display" class="age-display"></div>
+      </div>
+      <div class="date-group">
+        <label for="exam">Date of Examination</label>
+        <input type="date" id="exam" required />
+      </div>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-section">
+      <h3>Right Eye (OD)</h3>
+      <input type="number" step="0.25" id="od-sph" placeholder="SPH" required />
+      <input type="number" step="0.25" id="od-cyl" placeholder="CYL" required />
+      <input type="number" id="od-axis" placeholder="Axis" required />
+      <input type="number" step="0.25" id="od-add" placeholder="ADD" required />
+      <button class="btn copy-btn" onclick="copyToOtherEye('od')">Copy to Left Eye</button>
+    </div>
+    <div class="form-section">
+      <h3>Left Eye (OS)</h3>
+      <input type="number" step="0.25" id="os-sph" placeholder="SPH" required />
+      <input type="number" step="0.25" id="os-cyl" placeholder="CYL" required />
+      <input type="number" id="os-axis" placeholder="Axis" required />
+      <input type="number" step="0.25" id="os-add" placeholder="ADD" required />
+      <button class="btn copy-btn" onclick="copyToOtherEye('os')">Copy to Right Eye</button>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-section">
+      <h3>Pupillary Distance (PD)</h3>
+      <div class="pd-options">
+        <label>
+          <input type="radio" name="pd-type" value="single" checked onchange="togglePDInputs()" />
+          Single PD Measurement
+        </label>
+        <label>
+          <input type="radio" name="pd-type" value="dual" onchange="togglePDInputs()" />
+          Dual PD Measurement (Separate for each eye)
+        </label>
+      </div>
+      <div id="single-pd">
+        <input type="number" step="0.5" id="pd" placeholder="PD (mm)" required />
+      </div>
+      <div id="dual-pd" style="display: none;">
+        <div class="pd-input-group">
+          <input type="number" step="0.5" id="pd-od" placeholder="Right Eye PD (mm)" />
+          <input type="number" step="0.5" id="pd-os" placeholder="Left Eye PD (mm)" />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-section">
+      <h3>Sample Prescription Format</h3>
+      <div style="margin-top: 10px; padding: 15px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0;">
+        <p style="font-size: 0.9em; color: #666; margin: 5px 0;"><strong>Right Eye (OD):</strong></p>
+        <ul style="font-size: 0.9em; color: #666; margin: 5px 0; padding-left: 20px;">
+          <li>SPH1: -2.50</li>
+          <li>CYL1: +0.75</li>
+          <li>AXIS1: 180</li>
+          <li>ADD1: +3.00</li>
+          <li>PD: 32.5mm</li>
+        </ul>
+        <p style="font-size: 0.9em; color: #666; margin: 5px 0;"><strong>Left Eye (OS):</strong></p>
+        <ul style="font-size: 0.9em; color: #666; margin: 5px 0; padding-left: 20px;">
+          <li>SPH2: +2.75</li>
+          <li>CYL2: -0.50</li>
+          <li>AXIS2: 170</li>
+          <li>ADD2: +2.00</li>
+          <li>PD: 31.5mm</li>
+        </ul>
+        <p style="font-size: 0.9em; color: #666; margin: 5px 0;"><strong>Pupillary Distance: 64mm (Dual)</strong></p>
+        <p style="font-size: 0.9em; color: #666; margin: 10px 0 0 0;">
+          Note: Copy and paste this format into your text file for easy parsing. Make sure to include the + or - signs for SPH, CYL, and ADD values.
+        </p>
+      </div>
+    </div>
+  </div>
+  <button class="btn" onclick="savePatient()">Save Patient</button>
+  <button class="btn" onclick="goDashboard()">⬅ Back to Dashboard</button>
+</div>
+
+<div class="card hidden" id="view-box">
+  <h2>Patient Records</h2>
+  <div id="records"></div>
+  <button class="btn" onclick="showForm()">➕ Add Another Patient</button>
+  <button class="btn" onclick="goDashboard()">⬅ Back to Dashboard</button>
+</div>
+
+<div class="card hidden" id="details-box">
+  <h2>Patient Details</h2>
+  <div id="details-content"></div>
+  <div class="progress-container" id="emailProgress">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <div class="status-text" id="statusText"></div>
+  <div class="error-message" id="errorMessage"></div>
+  <button class="btn" onclick="printDetails()">🖨 Print</button>
+  <button class="btn" onclick="sendEmail()">📧 Send via Email</button>
+  <button class="btn" onclick="showView()">⬅ Back to Records</button>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="delete-confirm" id="deleteConfirm">
+  <h3>Confirm Delete</h3>
+  <p>Please enter the security PIN to delete this record:</p>
+  <input type="password" id="deletePin" placeholder="Enter PIN">
+  <div>
+    <button class="btn" onclick="confirmDelete()">Delete</button>
+    <button class="btn" onclick="cancelDelete()">Cancel</button>
+  </div>
+</div>
+
+<div class="edit-confirm" id="editConfirm">
+  <h3>Edit Patient Record</h3>
+  <p>Please enter the security PIN to edit this record:</p>
+  <input type="password" id="editPin" placeholder="Enter PIN">
+  <div>
+    <button class="btn" onclick="confirmEdit()">Edit</button>
+    <button class="btn" onclick="cancelEdit()">Cancel</button>
+  </div>
+</div>
+
+<script>
+  let selectedPatient = null;
+  let patientToDelete = null;
+  let patientToEdit = null;
+
+  // EmailJS Configuration
+  const EMAILJS_CONFIG = {
+    publicKey: 'ZDDzSAEactyGo0Xs5',
+    serviceId: 'service_8w0bht4',
+    templateId: 'template_bkr29b6'
+  };
+
+  // Initialize EmailJS
+  (function() {
+    if (!EMAILJS_CONFIG.publicKey || !EMAILJS_CONFIG.serviceId || !EMAILJS_CONFIG.templateId) {
+      console.error('EmailJS configuration is missing. Please set your EmailJS credentials.');
+      return;
+    }
+    emailjs.init(EMAILJS_CONFIG.publicKey);
+    console.log('EmailJS initialized with public key:', EMAILJS_CONFIG.publicKey);
+  })();
+
+  async function sendEmail() {
+    if (!selectedPatient) return;
+    
+    try {
+      // Reset UI
+      const progressContainer = document.getElementById('emailProgress');
+      const progressBar = document.getElementById('progressBar');
+      const statusText = document.getElementById('statusText');
+      const errorMessage = document.getElementById('errorMessage');
+      const sendButton = document.querySelector('button[onclick="sendEmail()"]');
+      
+      progressContainer.style.display = 'block';
+      errorMessage.style.display = 'none';
+      progressBar.style.width = '0%';
+      statusText.textContent = 'Sending email...';
+      sendButton.disabled = true;
+
+      // Generate a unique ID for this patient's results
+      const resultId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+      
+      // Store the patient's results with the unique ID
+      const resultsData = {
+        id: resultId,
+        patient: selectedPatient,
+        date: new Date().toISOString()
+      };
+      
+      // Store in localStorage (in a real app, this would be stored on a server)
+      const results = JSON.parse(localStorage.getItem("results") || "{}");
+      results[resultId] = resultsData;
+      localStorage.setItem("results", JSON.stringify(results));
+
+      // Create the results URL
+      const resultsUrl = `${window.location.origin}${window.location.pathname}?results=${resultId}`;
+
+      console.log('Attempting to send email with parameters:', {
+        serviceId: EMAILJS_CONFIG.serviceId,
+        templateId: EMAILJS_CONFIG.templateId,
+        to_email: selectedPatient.email,
+        from_email: 'therefractionteam@gmail.com'
+      });
+
+      // Send email with the link
+      const response = await emailjs.send(
+        EMAILJS_CONFIG.serviceId,
+        EMAILJS_CONFIG.templateId,
+        {
+          to_name: selectedPatient.name,
+          to_email: selectedPatient.email,
+          from_name: 'Refraction Team',
+          from_email: 'therefractionteam@gmail.com',
+          message: `Dear ${selectedPatient.name},\n\nYour eye test results are ready. Please click the link below to view your results:\n\n${resultsUrl}\n\nThis link will expire in 24 hours.\n\nIf you have any questions about your results, please don't hesitate to contact us.\n\nBest regards,\nRefraction Team`,
+          results_link: resultsUrl
+        }
+      );
+
+      console.log('EmailJS response:', response);
+
+      // Update progress
+      progressBar.style.width = '100%';
+      statusText.textContent = 'Email sent successfully!';
+      
+      setTimeout(() => {
+        progressContainer.style.display = 'none';
+        statusText.textContent = '';
+        sendButton.disabled = false;
+      }, 2000);
+
+    } catch (error) {
+      console.error('Email sending error:', error);
+      progressBar.style.width = '0%';
+      statusText.textContent = '';
+      errorMessage.textContent = `Failed to send email. Error: ${error.message || 'Unknown error'}`;
+      errorMessage.style.display = 'block';
+      sendButton.disabled = false;
+    }
+  }
+
+  // Add function to check for results in URL
+  function checkForResults() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const resultsId = urlParams.get('results');
+    
+    if (resultsId) {
+      const results = JSON.parse(localStorage.getItem("results") || "{}");
+      const resultData = results[resultsId];
+      
+      if (resultData) {
+        // Show the results
+        selectedPatient = resultData.patient;
+        viewDetailsFromResults();
+      } else {
+        alert('Results not found or link has expired.');
+      }
+    }
+  }
+
+  // Function to view details from results link
+  function viewDetailsFromResults() {
+    const statusClass = selectedPatient.status === 'reviewed' ? 'status-reviewed' : 'status-pending';
+    const statusText = selectedPatient.status === 'reviewed' ? 'Reviewed' : 'Pending';
+    
+    const html = `
+      <p><strong>Name:</strong> ${selectedPatient.name}</p>
+      <p><strong>Phone:</strong> ${selectedPatient.phone}</p>
+      <p><strong>Email:</strong> ${selectedPatient.email}</p>
+      <p><strong>Location:</strong> ${selectedPatient.location}</p>
+      <p><strong>Date of Birth:</strong> ${selectedPatient.dob}</p>
+      <p><strong>Age:</strong> ${selectedPatient.age} years</p>
+      <p><strong>Date of Examination:</strong> ${selectedPatient.exam}</p>
+      <p><strong>Status:</strong> <span class="status-badge ${statusClass}">${statusText}</span></p>
+      <h4>Right Eye (OD)</h4>
+      <ul>
+        <li><strong>SPH:</strong> ${selectedPatient.od[0]}</li>
+        <li><strong>CYL:</strong> ${selectedPatient.od[1]}</li>
+        <li><strong>Axis:</strong> ${selectedPatient.od[2]}</li>
+        <li><strong>ADD:</strong> ${selectedPatient.od[3]}</li>
+      </ul>
+      <h4>Left Eye (OS)</h4>
+      <ul>
+        <li><strong>SPH:</strong> ${selectedPatient.os[0]}</li>
+        <li><strong>CYL:</strong> ${selectedPatient.os[1]}</li>
+        <li><strong>Axis:</strong> ${selectedPatient.os[2]}</li>
+        <li><strong>ADD:</strong> ${selectedPatient.os[3]}</li>
+      </ul>
+      <h4>Pupillary Distance (PD)</h4>
+      ${typeof selectedPatient.pd === 'object' ? `
+        <div class="pd-section">
+          <p><strong>Right Eye PD:</strong> ${selectedPatient.pd.od} mm</p>
+          <p><strong>Left Eye PD:</strong> ${selectedPatient.pd.os} mm</p>
+        </div>
+      ` : `<p>${selectedPatient.pd} mm</p>`}
+      ${selectedPatient.recommendation ? `
+        <div class="recommendation-section">
+          <h4>Doctor's Recommendation</h4>
+          <div class="recommendation-box">
+            <p>${selectedPatient.recommendation}</p>
+          </div>
+        </div>
+      ` : ''}
+    `;
+    
+    document.getElementById("view-box").classList.add("hidden");
+    document.getElementById("form-box").classList.add("hidden");
+    document.getElementById("dashboard-box").classList.add("hidden");
+    document.getElementById("details-box").classList.remove("hidden");
+    document.getElementById("details-content").innerHTML = html;
+  }
+
+  // Call checkForResults when the page loads
+  window.onload = function() {
+    checkForResults();
+  };
+
+  function authenticate() {
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value.trim();
+    if (btoa(u) === "YWRtaW4=" && btoa(p) === "YWRtaW4=") {
+      document.getElementById("login-box").classList.add("hidden");
+      document.getElementById("dashboard-box").classList.remove("hidden");
+    } else {
+      alert("Invalid login");
+    }
+  }
+
+  function showForm() {
+    document.getElementById("dashboard-box").classList.add("hidden");
+    document.getElementById("form-box").classList.remove("hidden");
+  }
+
+  function showView() {
+    document.getElementById("dashboard-box").classList.add("hidden");
+    document.getElementById("form-box").classList.add("hidden");
+    document.getElementById("details-box").classList.add("hidden");
+    document.getElementById("view-box").classList.remove("hidden");
+    loadPatients();
+  }
+
+  function calculateAge() {
+    const dob = new Date(document.getElementById('dob').value);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    
+    document.getElementById('age-display').textContent = `Age: ${age} years`;
+  }
+
+  function togglePDInputs() {
+    const pdType = document.querySelector('input[name="pd-type"]:checked').value;
+    const singlePD = document.getElementById('single-pd');
+    const dualPD = document.getElementById('dual-pd');
+    const duplicateForm = document.getElementById('pd-duplicate-form');
+    
+    if (pdType === 'single') {
+      singlePD.style.display = 'block';
+      dualPD.style.display = 'none';
+      duplicateForm.style.display = 'none';
+      document.getElementById('pd').required = true;
+      document.getElementById('pd-od').required = false;
+      document.getElementById('pd-os').required = false;
+    } else {
+      singlePD.style.display = 'none';
+      dualPD.style.display = 'block';
+      duplicateForm.style.display = 'block';
+      document.getElementById('pd').required = false;
+      document.getElementById('pd-od').required = true;
+      document.getElementById('pd-os').required = true;
+    }
+  }
+
+  function savePatient() {
+    const pdType = document.querySelector('input[name="pd-type"]:checked').value;
+    const patient = {
+      name: document.getElementById('name').value,
+      phone: document.getElementById('phone').value,
+      email: document.getElementById('email').value,
+      location: document.getElementById('location').value,
+      dob: document.getElementById('dob').value,
+      exam: document.getElementById('exam').value,
+      age: document.getElementById('age-display').textContent.replace('Age: ', '').replace(' years', ''),
+      pd: pdType === 'single' ? 
+          document.getElementById('pd').value : 
+          {
+            od: document.getElementById('pd-od').value,
+            os: document.getElementById('pd-os').value
+          },
+      od: [
+        document.getElementById('od-sph').value,
+        document.getElementById('od-cyl').value,
+        document.getElementById('od-axis').value,
+        document.getElementById('od-add').value
+      ],
+      os: [
+        document.getElementById('os-sph').value,
+        document.getElementById('os-cyl').value,
+        document.getElementById('os-axis').value,
+        document.getElementById('os-add').value
+      ],
+      status: 'pending'
+    };
+
+    let patients = JSON.parse(localStorage.getItem("patients") || "[]");
+    patients.push(patient);
+    localStorage.setItem("patients", JSON.stringify(patients));
+    
+    alert("Patient saved successfully!");
+    showView();
+  }
+
+  function printDetails() {
+    const content = document.getElementById("details-content").innerHTML;
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Test Results - ${selectedPatient.name}</title>
+          <style>
+            body { 
+              font-family: Segoe UI, Tahoma, Verdana, sans-serif; 
+              padding: 40px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #007bff;
+            }
+            .header h1 {
+              color: #007bff;
+              margin-bottom: 10px;
+            }
+            .patient-info {
+              background: #f8f9fa;
+              padding: 20px;
+              border-radius: 8px;
+              margin-bottom: 20px;
+            }
+            h4 { 
+              margin-top: 20px;
+              color: #007bff;
+            }
+            ul { 
+              padding-left: 20px;
+              list-style-type: none;
+            }
+            li {
+              margin: 8px 0;
+            }
+            .pd-section, .recommendation-box { 
+              background: #f0f8ff; 
+              padding: 15px; 
+              margin: 10px 0; 
+              border-radius: 8px;
+              border: 1px solid #d0e0ff;
+            }
+            .status-badge { 
+              display: inline-block; 
+              padding: 3px 8px; 
+              border-radius: 12px; 
+              font-size: 0.8em; 
+              font-weight: bold; 
+            }
+            .status-pending { 
+              background-color: #ffc107; 
+              color: #000; 
+            }
+            .status-reviewed { 
+              background-color: #28a745; 
+              color: #fff; 
+            }
+            .footer {
+              margin-top: 40px;
+              text-align: center;
+              font-size: 0.9em;
+              color: #666;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Test Results</h1>
+            <p>Date: ${new Date().toLocaleDateString()}</p>
+          </div>
+          ${content}
+          <div class="footer">
+            <p>This document was generated by Refraction Team</p>
+            <p>For any questions, please contact your healthcare provider</p>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  }
+
+  function goDashboard() {
+    document.getElementById("form-box").classList.add("hidden");
+    document.getElementById("view-box").classList.add("hidden");
+    document.getElementById("details-box").classList.add("hidden");
+    document.getElementById("dashboard-box").classList.remove("hidden");
+  }
+
+  function loadPatients() {
+    const container = document.getElementById("records");
+    const patients = JSON.parse(localStorage.getItem("patients") || "[]");
+    if (patients.length === 0) {
+      container.innerHTML = "<p>No records yet.</p>";
+      return;
+    }
+    let html = `<table><tr><th>Name</th><th>Phone</th><th>Email</th><th>Exam Date</th><th>Status</th><th>Actions</th></tr>`;
+    patients.forEach((p, i) => {
+      const statusClass = p.status === 'reviewed' ? 'status-reviewed' : 'status-pending';
+      const statusText = p.status === 'reviewed' ? 'Reviewed' : 'Pending';
+      html += `<tr>
+        <td>${p.name}</td>
+        <td>${p.phone}</td>
+        <td>${p.email}</td>
+        <td>${p.exam}</td>
+        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        <td>
+          <div class="action-buttons">
+            <button class="details-btn" onclick="viewDetails(${i})">View</button>
+            <button class="delete-btn" onclick="initiateDelete(${i})">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+    });
+    html += `</table>`;
+    container.innerHTML = html;
+  }
+
+  function viewDetails(index) {
+    const patients = JSON.parse(localStorage.getItem("patients") || "[]");
+    const p = patients[index];
+    selectedPatient = p;
+    const statusClass = p.status === 'reviewed' ? 'status-reviewed' : 'status-pending';
+    const statusText = p.status === 'reviewed' ? 'Reviewed' : 'Pending';
+    
+    const html = `
+      <p><strong>Name:</strong> ${p.name}</p>
+      <p><strong>Phone:</strong> ${p.phone}</p>
+      <p><strong>Email:</strong> ${p.email}</p>
+      <p><strong>Location:</strong> ${p.location}</p>
+      <p><strong>Date of Birth:</strong> ${p.dob}</p>
+      <p><strong>Age:</strong> ${p.age} years</p>
+      <p><strong>Date of Examination:</strong> ${p.exam}</p>
+      <p><strong>Status:</strong> <span class="status-badge ${statusClass}">${statusText}</span></p>
+      <h4>Right Eye (OD)</h4>
+      <ul>
+        <li><strong>SPH:</strong> ${p.od[0]}</li>
+        <li><strong>CYL:</strong> ${p.od[1]}</li>
+        <li><strong>Axis:</strong> ${p.od[2]}</li>
+        <li><strong>ADD:</strong> ${p.od[3]}</li>
+      </ul>
+      <h4>Left Eye (OS)</h4>
+      <ul>
+        <li><strong>SPH:</strong> ${p.os[0]}</li>
+        <li><strong>CYL:</strong> ${p.os[1]}</li>
+        <li><strong>Axis:</strong> ${p.os[2]}</li>
+        <li><strong>ADD:</strong> ${p.os[3]}</li>
+      </ul>
+      <h4>Pupillary Distance (PD)</h4>
+      ${typeof p.pd === 'object' ? `
+        <div class="pd-section">
+          <p><strong>Right Eye PD:</strong> ${p.pd.od} mm</p>
+          <p><strong>Left Eye PD:</strong> ${p.pd.os} mm</p>
+        </div>
+      ` : `<p>${p.pd} mm</p>`}
+      ${p.recommendation ? `
+        <div class="recommendation-section">
+          <h4>Doctor's Recommendation</h4>
+          <div class="recommendation-box">
+            <p>${p.recommendation}</p>
+          </div>
+        </div>
+      ` : ''}
+    `;
+    document.getElementById("view-box").classList.add("hidden");
+    document.getElementById("details-box").classList.remove("hidden");
+    document.getElementById("details-content").innerHTML = html;
+  }
+
+  function initiateDelete(index) {
+    patientToDelete = index;
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('deleteConfirm').style.display = 'block';
+    document.getElementById('deletePin').value = '';
+  }
+
+  function cancelDelete() {
+    patientToDelete = null;
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('deleteConfirm').style.display = 'none';
+  }
+
+  function confirmDelete() {
+    const pin = document.getElementById('deletePin').value;
+    if (pin === '7120') {
+      const patients = JSON.parse(localStorage.getItem("patients") || "[]");
+      patients.splice(patientToDelete, 1);
+      localStorage.setItem("patients", JSON.stringify(patients));
+      loadPatients();
+      cancelDelete();
+      alert('Patient record deleted successfully');
+    } else {
+      alert('Incorrect PIN. Please try again.');
+    }
+  }
+
+  function initiateEdit(index) {
+    console.log('Initiating edit for patient:', index);
+    patientToEdit = index;
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('editConfirm').style.display = 'block';
+    document.getElementById('editPin').value = '';
+  }
+
+  function cancelEdit() {
+    patientToEdit = null;
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('editConfirm').style.display = 'none';
+  }
+
+  function confirmEdit() {
+    const pin = document.getElementById('editPin').value;
+    console.log('Confirming edit with PIN:', pin);
+    if (pin === '7120') {
+      const patients = JSON.parse(localStorage.getItem("patients") || "[]");
+      const patient = patients[patientToEdit];
+      console.log('Editing patient:', patient);
+      
+      // Fill the form with patient data
+      document.getElementById('name').value = patient.name;
+      document.getElementById('phone').value = patient.phone;
+      document.getElementById('email').value = patient.email;
+      document.getElementById('location').value = patient.location;
+      document.getElementById('dob').value = patient.dob;
+      document.getElementById('exam').value = patient.exam;
+      
+      // Fill eye test results
+      document.getElementById('od-sph').value = patient.od[0];
+      document.getElementById('od-cyl').value = patient.od[1];
+      document.getElementById('od-axis').value = patient.od[2];
+      document.getElementById('od-add').value = patient.od[3];
+      
+      document.getElementById('os-sph').value = patient.os[0];
+      document.getElementById('os-cyl').value = patient.os[1];
+      document.getElementById('os-axis').value = patient.os[2];
+      document.getElementById('os-add').value = patient.os[3];
+      
+      // Handle PD
+      if (typeof patient.pd === 'object') {
+        document.querySelector('input[name="pd-type"][value="dual"]').checked = true;
+        document.getElementById('pd-od').value = patient.pd.od;
+        document.getElementById('pd-os').value = patient.pd.os;
+      } else {
+        document.querySelector('input[name="pd-type"][value="single"]').checked = true;
+        document.getElementById('pd').value = patient.pd;
+      }
+      togglePDInputs();
+      
+      // Remove the old record
+      patients.splice(patientToEdit, 1);
+      localStorage.setItem("patients", JSON.stringify(patients));
+      
+      // Show the form
+      document.getElementById("view-box").classList.add("hidden");
+      document.getElementById("details-box").classList.add("hidden");
+      document.getElementById("form-box").classList.remove("hidden");
+      
+      cancelEdit();
+    } else {
+      alert('Incorrect PIN. Please try again.');
+    }
+  }
+
+  async function parsePatientFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      let text = '';
+
+      if (file.type === 'application/pdf') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        const page = await pdf.getPage(1);
+        const content = await page.getTextContent();
+        text = content.items.map(item => item.str).join('\n');
+      } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const arrayBuffer = await file.arrayBuffer();
+        const doc = await docx.Document.load(arrayBuffer);
+        text = await doc.getText();
+      } else if (file.type === 'text/plain') {
+        text = await file.text();
+      } else {
+        throw new Error('Please upload a PDF, Word document, or text file');
+      }
+
+      console.log('Raw text:', text);
+
+      const data = {};
+
+      // --- RIGHT EYE (OD) ---
+      const odSection = text.match(/RIGHT EYE \(OD\):([\s\S]*?)(?=LEFT EYE \(OS\)|$)/i);
+      if (odSection) {
+        const od = odSection[1];
+        console.log('OD Section:', od);
+        
+        // Log each match attempt
+        const sphMatch = od.match(/SPH1:\s*([-+]?\d*\.?\d+)/i);
+        console.log('SPH Match:', sphMatch);
+        data.od_sph = sphMatch ? sphMatch[1] : null;
+
+        const cylMatch = od.match(/CYL1:\s*([-+]?\d*\.?\d+)/i);
+        console.log('CYL Match:', cylMatch);
+        data.od_cyl = cylMatch ? cylMatch[1] : null;
+
+        const axisMatch = od.match(/AXIS1:\s*(\d+)/i);
+        console.log('Axis Match:', axisMatch);
+        data.od_axis = axisMatch ? axisMatch[1] : null;
+
+        const addMatch = od.match(/ADD1:\s*([-+]?\d*\.?\d+)/i);
+        console.log('ADD Match:', addMatch);
+        data.od_add = addMatch ? addMatch[1] : null;
+
+        const pdMatch = od.match(/PD:\s*(\d+\.?\d*)\s*mm/i);
+        console.log('PD Match:', pdMatch);
+        data.pd_od = pdMatch ? pdMatch[1] : null;
+      }
+
+      // --- LEFT EYE (OS) ---
+      const osSection = text.match(/LEFT EYE \(OS\):([\s\S]*?)(?=PUPILLARY DISTANCE|$)/i);
+      if (osSection) {
+        const os = osSection[1];
+        console.log('OS Section:', os);
+        
+        // Log each match attempt
+        const sphMatch = os.match(/SPH2:\s*([-+]?\d*\.?\d+)/i);
+        console.log('SPH Match:', sphMatch);
+        data.os_sph = sphMatch ? sphMatch[1] : null;
+
+        const cylMatch = os.match(/CYL2:\s*([-+]?\d*\.?\d+)/i);
+        console.log('CYL Match:', cylMatch);
+        data.os_cyl = cylMatch ? cylMatch[1] : null;
+
+        const axisMatch = os.match(/AXIS2:\s*(\d+)/i);
+        console.log('Axis Match:', axisMatch);
+        data.os_axis = axisMatch ? axisMatch[1] : null;
+
+        const addMatch = os.match(/ADD2:\s*([-+]?\d*\.?\d+)/i);
+        console.log('ADD Match:', addMatch);
+        data.os_add = addMatch ? addMatch[1] : null;
+
+        const pdMatch = os.match(/PD:\s*(\d+\.?\d*)\s*mm/i);
+        console.log('PD Match:', pdMatch);
+        data.pd_os = pdMatch ? pdMatch[1] : null;
+      }
+
+      // --- PUPILLARY DISTANCE ---
+      const pdMatch = text.match(/PUPILLARY DISTANCE:\s*(\d+\.?\d*)\s*mm\s*\(?(dual)?\)?/i);
+      if (pdMatch) {
+        const [_, value, isDual] = pdMatch;
+        if (isDual) {
+          data.pd_type = 'dual';
+        } else {
+          data.pd_value = value;
+          data.pd_type = 'single';
+        }
+      }
+
+      console.log('Final parsed data:', data);
+
+      // Validate required fields
+      const requiredFields = {
+        'od_sph': 'Right Eye SPH',
+        'od_cyl': 'Right Eye CYL',
+        'od_axis': 'Right Eye Axis',
+        'od_add': 'Right Eye ADD',
+        'os_sph': 'Left Eye SPH',
+        'os_cyl': 'Left Eye CYL',
+        'os_axis': 'Left Eye Axis',
+        'os_add': 'Left Eye ADD'
+      };
+
+      const missing = [];
+      for (const [field, label] of Object.entries(requiredFields)) {
+        if (!data[field]) missing.push(label);
+      }
+
+      if (missing.length > 0) {
+        throw new Error('Missing required fields: ' + missing.join(', '));
+      }
+
+      fillFormWithData(data);
+
+    } catch (err) {
+      console.error('Parsing error:', err);
+      alert(err.message || 'Error parsing file');
+    }
+  }
+
+  function fillFormWithData(data) {
+    // Right eye
+    document.getElementById('od-sph').value  = data.od_sph;
+    document.getElementById('od-cyl').value  = data.od_cyl;
+    document.getElementById('od-axis').value = data.od_axis;
+    document.getElementById('od-add').value  = data.od_add;
+
+    // Left eye
+    document.getElementById('os-sph').value  = data.os_sph;
+    document.getElementById('os-cyl').value  = data.os_cyl;
+    document.getElementById('os-axis').value = data.os_axis;
+    document.getElementById('os-add').value  = data.os_add;
+
+    // PD
+    if (data.pd_type === 'dual') {
+      document.querySelector('input[name="pd-type"][value="dual"]').checked = true;
+      document.getElementById('pd-od').value = data.pd_od;
+      document.getElementById('pd-os').value = data.pd_os;
+    } else {
+      document.querySelector('input[name="pd-type"][value="single"]').checked = true;
+      document.getElementById('pd').value = data.pd_value;
+    }
+    togglePDInputs();
+
+    // Examination date
+    if (data.exam) {
+      document.getElementById('exam').value = data.exam;
+    }
+
+    console.log('Form filled successfully');
+  }
+
+  // Add copy functionality
+  function copyToOtherEye(fromEye) {
+    const fields = ['sph', 'cyl', 'axis', 'add'];
+    const sourcePrefix = fromEye === 'od' ? 'od' : 'os';
+    const targetPrefix = fromEye === 'od' ? 'os' : 'od';
+    
+    fields.forEach(field => {
+      const sourceValue = document.getElementById(`${sourcePrefix}-${field}`).value;
+      document.getElementById(`${targetPrefix}-${field}`).value = sourceValue;
+    });
+  }
+</script>
+</body>
+</html> 
